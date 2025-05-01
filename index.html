@@ -1,0 +1,387 @@
+<!DOCTYPE html>
+<html lang="ca">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Tasques del dia</title>
+  <style>
+    body {
+      font-family: sans-serif;
+      background: url("https://images.unsplash.com/photo-1506765515384-028b60a970df?auto=format&fit=crop&w=1600&q=80") no-repeat center center fixed; background-size: cover;
+      margin: 0;
+      padding: 1rem;
+    }
+    h1, h2 {
+      text-align: center;
+    }
+    .contenidor {
+      display: flex;
+      justify-content: space-around;
+      flex-wrap: wrap;
+      gap: 2rem;
+    }
+    .columna {
+      flex: 1;
+      min-width: 300px;
+      background: #ffffffcc;
+      padding: 1rem;
+      border-radius: 1rem;
+      box-shadow: 0 0 10px #999;
+    }
+    .tasca {
+      border: 2px solid #ccc;
+      padding: 0.8rem;
+      margin: 0.5rem 0;
+      border-radius: 1rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-size: 1.1rem;
+      background: #fff;
+    }
+    .tasca img {
+      width: 32px;
+      height: 32px;
+      margin-right: 1rem;
+    }
+    .fet {
+      background-color: #c8e6c9 !important;
+      text-decoration: line-through;
+    }
+    button {
+      font-size: 1rem;
+      padding: 0.4rem 0.8rem;
+      border: none;
+      border-radius: 0.5rem;
+      cursor: pointer;
+    }
+    .missatge-final {
+      display: none;
+      text-align: center;
+      font-size: 1.5rem;
+      color: #2e7d32;
+      margin-top: 1rem;
+    }
+  </style>
+<script src="https://cdn.jsdelivr.net/npm/chart.js">
+    function calcularEstadistiques() {
+      const historial = JSON.parse(localStorage.getItem("tasques-historial") || "{}");
+      nens.forEach(nen => {
+        const dades = historial[nen] || [];
+        const totalTasques = dades.reduce((acc, reg) => acc + reg.filter(x => x).length, 0);
+        const totalPossibles = dades.length * 7;
+        const ctx = document.getElementById("grafica" + nen.charAt(0).toUpperCase() + nen.slice(1)).getContext("2d");
+        new Chart(ctx, {
+          type: 'doughnut',
+          data: {
+            labels: ['Fetes', 'Per fer'],
+            datasets: [{
+              data: [totalTasques, totalPossibles - totalTasques],
+              backgroundColor: ['#66bb6a', '#ef9a9a']
+            }]
+          },
+          options: {
+            plugins: {
+              title: {
+                display: true,
+                text: 'Estadístiques de ' + nen.charAt(0).toUpperCase() + nen.slice(1)
+              }
+            }
+          }
+        });
+      });
+    }
+
+    function prepararCalendari() {
+      const historial = JSON.parse(localStorage.getItem("tasques-historial") || "{}");
+      document.getElementById("calendari").addEventListener("change", function() {
+        const dataSeleccionada = this.value;
+        const dataFormat = new Date(dataSeleccionada).toLocaleDateString("ca-ES");
+        let html = `<h3>${dataFormat}</h3>`;
+        nens.forEach(nen => {
+          html += `<p><strong>${nen.charAt(0).toUpperCase() + nen.slice(1)}:</strong><br>`;
+          const dies = historial[nen] || [];
+          const index = dies.length - (Object.keys(localStorage.getItem("tasques-historial") ? JSON.parse(localStorage.getItem("tasques-historial"))[nen].length : 0));
+          const dia = dies[index + (new Date().getDay() - new Date(dataSeleccionada).getDay())];
+          if (dia) {
+            tasques.forEach((t, i) => {
+              html += `${t.nom}: ${dia[i] ? '✅' : '❌'}<br>`;
+            });
+          } else {
+            html += "Sense dades.</p>";
+          }
+        });
+        document.getElementById("consulta-dia").innerHTML = html;
+      });
+    }
+
+    if (dataGuardada !== dataActual) {
+      guardaHistorial();
+    }
+
+    calcularEstadistiques();
+    prepararCalendari();
+    mostrarResumSetmana();
+
+    function mostrarResumSetmana() {
+      const historial = JSON.parse(localStorage.getItem("tasques-historial") || "{}");
+      const avui = new Date();
+      const diesMostrats = 7;
+      let html = "<h3>Resum de la setmana</h3>";
+      html += "<table style='margin:auto; border-collapse: collapse;'><tr><th style='padding:0.5rem;'>Dia</th><th>Marc</th><th>Pau</th></tr>";
+
+      for (let i = diesMostrats - 1; i >= 0; i--) {
+        const data = new Date();
+        data.setDate(avui.getDate() - i);
+        const label = data.toLocaleDateString("ca-ES", { weekday: 'short', day: 'numeric', month: 'short' });
+        html += `<tr><td style='padding:0.5rem;'>${label}</td>`;
+
+        ['marc', 'pau'].forEach(nen => {
+          const dies = historial[nen] || [];
+          const registre = dies[dies.length - diesMostrats + i];
+          if (registre) {
+            const total = registre.length;
+            const fetes = registre.filter(x => x).length;
+            const complet = fetes === total;
+            const color = complet ? '#a5d6a7' : '#ef9a9a';
+            html += `<td style='background:${color}; text-align:center; padding:0.5rem;'>${fetes}/${total}</td>`;
+          } else {
+            html += `<td style='background:#eee; text-align:center; padding:0.5rem;'>-</td>`;
+          }
+        });
+
+        html += "</tr>";
+      }
+
+      html += "</table>";
+      document.getElementById("resum-setmana").innerHTML = html;
+    }
+</script>
+
+
+</head>
+<body>
+  <h1>Tasques del dia</h1>
+  <h2 id="data-dia"></h2>
+  <div class="contenidor">
+    <div class="columna" id="marc">
+      <h2>Marc</h2><div style="text-align:center; margin-bottom:1rem;"><button onclick="reiniciarIndividual('marc')" style="padding: 0.4rem 1rem; font-size: 0.9rem; border-radius: 0.5rem; background-color: #ffd6d6;">Reiniciar Marc</button></div>
+      <div class="missatge-final" id="fi-marc">🎉 Molt bé, Marc, has fet totes les tasques de hui! 🎉</div>
+    </div>
+    <div class="columna" id="pau">
+      <h2>Pau</h2><div style="text-align:center; margin-bottom:1rem;"><button onclick="reiniciarIndividual('pau')" style="padding: 0.4rem 1rem; font-size: 0.9rem; border-radius: 0.5rem; background-color: #ffd6d6;">Reiniciar Pau</button></div>
+      <div class="missatge-final" id="fi-pau">🎉 Molt bé, Pau, has fet totes les tasques de hui! 🎉</div>
+    </div>
+  </div>
+  <div style="background: #ffffffcc; margin: 2rem auto; padding: 1rem; border-radius: 1rem; max-width: 800px;">
+    <h2 style="text-align:center;">Estadístiques setmanals</h2>
+    <div style="display:flex; flex-direction:column; align-items:center;">
+      <canvas id="graficaMarc" width="200" height="200" style="margin:1rem;"></canvas>
+      <canvas id="graficaPau" width="200" height="200" style="margin:1rem;"></canvas>
+      <label for="calendari" style="margin-top: 2rem;">Consulta per dia:</label>
+      
+    <input type="date" id="calendari" />
+    <div id="resum-setmana" style="margin-top:2rem;"></div>
+    
+      <div id="consulta-dia" style="margin-top:1rem; font-size:1rem;"></div>
+    </div>
+  </div>
+
+  <audio id="so-fet" src="https://www.soundjay.com/buttons/sounds/button-3.mp3"></audio>
+  <audio id="so-final" src="https://www.soundjay.com/nature/sounds/birds-2.mp3"></audio>
+
+  <script>
+    const DATA_CLAU = "data-tasques";
+    const ESTAT_CLAU = "tasques-fetes";
+    const dataActual = new Date().toLocaleDateString("ca-ES");
+    const dataGuardada = localStorage.getItem(DATA_CLAU);
+
+    if (dataGuardada !== dataActual) {
+      localStorage.setItem(DATA_CLAU, dataActual);
+      localStorage.removeItem(ESTAT_CLAU);
+    }
+
+    const diesSetmana = ["Diumenge", "Dilluns", "Dimarts", "Dimecres", "Dijous", "Divendres", "Dissabte"];
+    const avui = new Date();
+    const diaSetmana = diesSetmana[avui.getDay()];
+    document.getElementById("data-dia").textContent = `${diaSetmana}, ${dataActual}`;
+
+    const tasques = [
+      { nom: "Fer el llit", icona: "🛏️" },
+      { nom: "Rentar-se les dents", icona: "🪥" },
+      { nom: "Fer els deures", icona: "📚" },
+      { nom: "Endreçar l'habitació", icona: "🧹" },
+      { nom: "Ajudar a parar taula", icona: "🍽️" },
+      { nom: "Tocar l'instrument", icona: "🎻" },
+      { nom: "Fer els deures de música", icona: "🎼" }
+    ];
+
+    const nens = ["marc", "pau"];
+    const soFet = document.getElementById("so-fet");
+    const soFinal = document.getElementById("so-final");
+
+    const estat = JSON.parse(localStorage.getItem(ESTAT_CLAU) || "{}");
+
+    nens.forEach(nen => {
+      const columna = document.getElementById(nen);
+      const missatge = document.getElementById("fi-" + nen);
+
+      const tasquesFetes = [];
+
+      tasques.forEach((tasca, i) => {
+        const div = document.createElement("div");
+        div.className = "tasca";
+
+        const span = document.createElement("span");
+        span.innerHTML = `${tasca.icona} ${tasca.nom}`;
+
+        const boto = document.createElement("button");
+        boto.textContent = "Fet!";
+        boto.onclick = () => {
+          div.classList.toggle("fet");
+          soFet.play();
+          actualitzaEstat();
+          comprovaFinal();
+        };
+
+        div.appendChild(span);
+        div.appendChild(boto);
+        columna.insertBefore(div, missatge);
+        tasquesFetes.push(div);
+      });
+
+      // Restaurar estat anterior si hi ha
+      if (estat[nen]) {
+        estat[nen].forEach((fet, i) => {
+          if (fet) tasquesFetes[i].classList.add("fet");
+        });
+        comprovaFinal();
+      }
+
+      function actualitzaEstat() {
+        const nouEstat = JSON.parse(localStorage.getItem(ESTAT_CLAU) || "{}");
+        nouEstat[nen] = tasquesFetes.map(div => div.classList.contains("fet"));
+        localStorage.setItem(ESTAT_CLAU, JSON.stringify(nouEstat));
+      }
+
+      function comprovaFinal() {
+        const fetes = tasquesFetes.filter(div => div.classList.contains("fet"));
+        if (fetes.length === tasquesFetes.length) {
+          missatge.style.display = "block";
+          soFinal.play();
+        } else {
+          missatge.style.display = "none";
+        }
+      }
+    });
+  
+    function reiniciarIndividual(nen) {
+      const clau = prompt("Introdueix la contrasenya per reiniciar les tasques de " + nen.charAt(0).toUpperCase() + nen.slice(1) + ":");
+      if (clau === "re29rd") {
+        const estatActual = JSON.parse(localStorage.getItem(ESTAT_CLAU) || "{}");
+        delete estatActual[nen];
+        localStorage.setItem(ESTAT_CLAU, JSON.stringify(estatActual));
+        location.reload();
+      } else {
+        alert("Contrasenya incorrecta.");
+      }
+    }
+
+    function calcularEstadistiques() {
+      const historial = JSON.parse(localStorage.getItem("tasques-historial") || "{}");
+      nens.forEach(nen => {
+        const dades = historial[nen] || [];
+        const totalTasques = dades.reduce((acc, reg) => acc + reg.filter(x => x).length, 0);
+        const totalPossibles = dades.length * 7;
+        const ctx = document.getElementById("grafica" + nen.charAt(0).toUpperCase() + nen.slice(1)).getContext("2d");
+        new Chart(ctx, {
+          type: 'doughnut',
+          data: {
+            labels: ['Fetes', 'Per fer'],
+            datasets: [{
+              data: [totalTasques, totalPossibles - totalTasques],
+              backgroundColor: ['#66bb6a', '#ef9a9a']
+            }]
+          },
+          options: {
+            plugins: {
+              title: {
+                display: true,
+                text: 'Estadístiques de ' + nen.charAt(0).toUpperCase() + nen.slice(1)
+              }
+            }
+          }
+        });
+      });
+    }
+
+    function prepararCalendari() {
+      const historial = JSON.parse(localStorage.getItem("tasques-historial") || "{}");
+      document.getElementById("calendari").addEventListener("change", function() {
+        const dataSeleccionada = this.value;
+        const dataFormat = new Date(dataSeleccionada).toLocaleDateString("ca-ES");
+        let html = `<h3>${dataFormat}</h3>`;
+        nens.forEach(nen => {
+          html += `<p><strong>${nen.charAt(0).toUpperCase() + nen.slice(1)}:</strong><br>`;
+          const dies = historial[nen] || [];
+          const index = dies.length - (Object.keys(localStorage.getItem("tasques-historial") ? JSON.parse(localStorage.getItem("tasques-historial"))[nen].length : 0));
+          const dia = dies[index + (new Date().getDay() - new Date(dataSeleccionada).getDay())];
+          if (dia) {
+            tasques.forEach((t, i) => {
+              html += `${t.nom}: ${dia[i] ? '✅' : '❌'}<br>`;
+            });
+          } else {
+            html += "Sense dades.</p>";
+          }
+        });
+        document.getElementById("consulta-dia").innerHTML = html;
+      });
+    }
+
+    if (dataGuardada !== dataActual) {
+      guardaHistorial();
+    }
+
+    calcularEstadistiques();
+    prepararCalendari();
+    mostrarResumSetmana();
+
+    function mostrarResumSetmana() {
+      const historial = JSON.parse(localStorage.getItem("tasques-historial") || "{}");
+      const avui = new Date();
+      const diesMostrats = 7;
+      let html = "<h3>Resum de la setmana</h3>";
+      html += "<table style='margin:auto; border-collapse: collapse;'><tr><th style='padding:0.5rem;'>Dia</th><th>Marc</th><th>Pau</th></tr>";
+
+      for (let i = diesMostrats - 1; i >= 0; i--) {
+        const data = new Date();
+        data.setDate(avui.getDate() - i);
+        const label = data.toLocaleDateString("ca-ES", { weekday: 'short', day: 'numeric', month: 'short' });
+        html += `<tr><td style='padding:0.5rem;'>${label}</td>`;
+
+        ['marc', 'pau'].forEach(nen => {
+          const dies = historial[nen] || [];
+          const registre = dies[dies.length - diesMostrats + i];
+          if (registre) {
+            const total = registre.length;
+            const fetes = registre.filter(x => x).length;
+            const complet = fetes === total;
+            const color = complet ? '#a5d6a7' : '#ef9a9a';
+            html += `<td style='background:${color}; text-align:center; padding:0.5rem;'>${fetes}/${total}</td>`;
+          } else {
+            html += `<td style='background:#eee; text-align:center; padding:0.5rem;'>-</td>`;
+          }
+        });
+
+        html += "</tr>";
+      }
+
+      html += "</table>";
+      document.getElementById("resum-setmana").innerHTML = html;
+    }
+</script>
+
+
+
+</body>
+</html>
